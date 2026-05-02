@@ -1,0 +1,15 @@
+project/
+├── data/
+│   ├── ratings.csv
+│   ├── movies.csv
+│   ├── tags.csv
+│   └── ratings_sample_150k.csv
+├── outputs/
+├── models/
+├── recommend.py
+├── run_eval.py
+├── prepare_data.py
+├── rs1_tfidf.py
+├── rs2_sbert.py
+├── requirements.txt
+└── readme.txt

@@ -1,0 +1,216 @@
+COMP54215 RecSys Individual Assignment — Working Notes
+
+1. Dataset
+- Dataset used: MovieLens 25M
+- Files used: ratings.csv, movies.csv, tags.csv
+- Original ratings count: 25,000,095
+- Original movies count: 62,423
+- Original tags count: 1,093,360
+- Assignment sample: 150,000 ratings
+- Same 150k sample used for both RS1 and RS2
+- Positive preference threshold: rating >= 4.0
+- Users in 150k sample: 69,576
+- Movies in 150k sample: 11,872
+- Movie profiles built: 62,423
+
+2. Data preparation
+- Randomly sampled 150,000 rows from ratings.csv with fixed random seed
+- Used the same sampled ratings file for both recommender systems
+- Aggregated tags by movieId into one tags_text field
+- Cleaned title, genres, and tags
+- Replaced genre separator "|" with spaces for profile text
+- Built one movie text profile per movie:
+  title + genres + tags
+- Main output files:
+  - outputs/ratings_sample_150k.csv
+  - outputs/movie_tags_aggregated.csv
+  - outputs/movie_profiles.csv
+  - outputs/ratings_with_movie_profiles.csv
+
+3. RS1 — Conventional recommender
+- Type: personalised content-based recommender
+- Representation: TF-IDF vectors from movie profile text
+- User profile: average TF-IDF vector of movies rated >= 4
+- Ranking method: cosine similarity
+- Output: top-N unseen movies
+- User eligibility for recommendations: at least 5 positive ratings
+- Explanations: similar to liked films + genre/theme wording
+
+Why RS1 fits:
+- Movie metadata is naturally text-based
+- Genres and tags map well to TF-IDF
+- Fast baseline
+- Transparent and easier to explain than deep models
+
+4. RS2 — Advanced recommender
+- Type: advanced extension of RS1
+- Same overall pipeline as RS1
+- Only main change: replace TF-IDF item vectors with SBERT embeddings
+- Model used: sentence-transformers/all-MiniLM-L6-v2
+- User profile: average embedding of movies rated >= 4
+- Ranking method: cosine similarity
+- Output: top-N unseen movies
+- User eligibility for recommendations: at least 5 positive ratings
+- Explanations: semantically close to liked films + theme wording
+
+Why RS2 fits:
+- Captures semantic similarity beyond exact keyword overlap
+- Still works well with short movie profile text
+- Minimal pipeline change keeps comparison fair
+- More advanced than TF-IDF but still practical to implement
+
+5. Command-line interface
+Commands used:
+- python recommend.py --rs rs1 --user 3 --topk 10
+- python recommend.py --rs rs2 --user 3 --topk 10
+- python run_eval.py
+
+CLI design:
+- Input: active user identified by user ID
+- Output: top-k movie recommendations with score and explanation
+- No graphical interface used
+
+6. Example demo user 1
+- User ID: 3
+- RS1 recommendations looked more literal / keyword / genre driven
+- Example RS1 recs:
+  - Fast & Furious 6
+  - Avengers, The
+  - Fast Five
+  - Watchmen
+  - Thor: The Dark World
+- RS2 recommendations looked more semantic / broader
+- Example RS2 recs:
+  - Kill Bill: Vol. 1
+  - Spider-Man 3
+  - Watchmen
+  - 300
+  - Road Warrior
+- Seen-movie filtering check:
+  - Any recommended movies already seen? False for both RS1 and RS2
+
+7. Need second demo user
+- Find one more user with interesting recommendations for both RS1 and RS2
+- Need to demo both systems for 2 users in the video
+- For second user, note:
+  - user ID
+  - top 3 RS1 recommendations
+  - top 3 RS2 recommendations
+  - short comment on how outputs differ
+
+8. Evaluation setup
+- Main ranking metric: NDCG@10
+- Second required metric: Novelty@10
+- Extra sanity metric also reported: HitRate@10
+- Evaluation user pool: users with at least 6 positive ratings
+- Randomly selected evaluation users: 300
+- Actually evaluated users: 104
+- For each evaluated user:
+  - hold out up to 3 positive movies
+  - build profile without those held-out positives
+  - candidate set = held-out positives + 100 sampled unseen negatives
+  - rank candidates
+  - compute HitRate@10, NDCG@10, Novelty@10
+
+Why these metrics:
+- NDCG@10 is suitable because the system outputs a ranked top-N list
+- Novelty@10 is suitable because recommenders should not only be accurate but also avoid recommending only obvious popular films
+- HitRate@10 is useful as an easy extra check for whether relevant held-out items appear in the top 10
+
+9. Final evaluation results
+RS1_TFIDF
+- Users evaluated: 104
+- HitRate@10: 0.932692
+- NDCG@10: 0.475242
+- Novelty@10: 24.135108
+
+RS2_SBERT
+- Users evaluated: 104
+- HitRate@10: 0.730769
+- NDCG@10: 0.273963
+- Novelty@10: 27.405814
+
+10. Main interpretation of results
+- RS1 performed better on ranking accuracy
+- RS2 performed better on novelty
+- This suggests an accuracy–novelty trade-off
+- TF-IDF worked well because MovieLens profile text contains direct genre/tag signals
+- SBERT produced more exploratory or semantically broader recommendations
+- RS2 did not outperform RS1 on ranking quality in this setup
+- More advanced does not automatically mean better on every metric
+
+11. Ethical / responsible AI notes — RS1
+- Popularity bias: mainstream films may dominate recommendations
+- Filter bubbles: content-based matching can keep recommending similar films
+- Tag noise: user-generated tags can be subjective, messy, or inappropriate
+- Cold start: users with very few ratings get weak profiles
+- Strength: explanations are relatively transparent
+
+12. Ethical / responsible AI notes — RS2
+- Same risks as RS1: popularity bias, cold start, noisy tags, filter bubbles
+- Additional issue: lower interpretability because semantic embeddings are harder to explain than TF-IDF
+- Pretrained language models may inherit biases from their training data
+- Recommendations may be semantically plausible but less directly explainable
+- Strength: can surface less obvious, more novel items
+
+13. RS1 vs RS2 comparison summary
+- RS1:
+  - stronger on HitRate@10
+  - stronger on NDCG@10
+  - more transparent
+  - more literal / direct matching
+- RS2:
+  - stronger on Novelty@10
+  - more semantic recommendations
+  - less transparent
+  - weaker ranking accuracy in this experiment
+
+14. Files created for submission
+- prepare_data.py
+- rs1_tfidf.py
+- rs2_sbert.py
+- recommend.py
+- run_eval.py
+- requirements.txt
+- readme.txt
+- outputs/ratings_sample_150k.csv
+- outputs/movie_profiles.csv
+- outputs/movie_sbert_embeddings.npy
+
+15. Things to show in the video
+Presentation section:
+- Domain: movie recommendation
+- Aim: recommend unseen movies a user is likely to enjoy
+- Dataset and preparation
+- RS1 method and justification
+- RS2 method and justification
+- Evaluation metrics with equations
+- Results table / graph
+- Ethics for RS1 and RS2
+- Comparison and conclusion
+- References in IEEE style
+
+Demo section:
+- Run RS1 for demo user 1
+- Run RS2 for demo user 1
+- Run RS1 for demo user 2
+- Run RS2 for demo user 2
+- Show relevant code sections briefly
+- Show run_eval.py result output
+
+16. Commands to remember
+- python prepare_data.py
+- python rs1_tfidf.py
+- python rs2_sbert.py
+- python recommend.py --rs rs1 --user 3 --topk 10
+- python recommend.py --rs rs2 --user 3 --topk 10
+- python run_eval.py
+
+17. Important reminders
+- Video is what gets marked most directly
+- Code zip is supporting evidence but still required
+- Need 2 demo users
+- Need references in IEEE style
+- Need requirements.txt
+- Need readme.txt
+- Need to acknowledge any generative AI use appropriately
